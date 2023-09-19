@@ -60,14 +60,9 @@ class VenueGenre(db.Model):
 class Artist(db.Model):
     __tablename__ = "artist"
 
-    # starting in 1000 so that in the seed.py file we can use the same id for the venues
-    id_seq = db.Sequence("artist_id_seq", start=1000)
-
     id = db.Column(
         db.Integer,
-        id_seq,
         primary_key=True,
-        server_default=id_seq.next_value(),
         nullable=False,
         autoincrement=True,
     )
@@ -97,14 +92,9 @@ class Artist(db.Model):
 class Genre(db.Model):
     __tablename__ = "genre"
 
-    # starting in 1000 so that in the seed.py file we can use the same id for the venues
-    id_seq = db.Sequence("genre_id_seq", start=1000)
-
     id = db.Column(
         db.Integer,
-        id_seq,
         primary_key=True,
-        server_default=id_seq.next_value(),
         nullable=False,
         autoincrement=True,
     )
@@ -129,9 +119,6 @@ class ArtistGenre(db.Model):
 
 class Show(db.Model):
     __tablename__ = "show"
-
-    # starting in 1000 so that in the seed.py file we can use the same id for the venues
-    id_seq = db.Sequence("show_id_seq", start=1000)
 
     id = db.Column(db.Integer, primary_key=True)
     venue_id = db.Column(db.Integer, db.ForeignKey("venue.id"), nullable=False)
