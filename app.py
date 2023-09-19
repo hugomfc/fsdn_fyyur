@@ -23,7 +23,7 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
-from models import db, Show, Venue, VenueGenre, Artist, ArtistGenre, Genre
+from models import db, Show, Venue, Artist
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime
 
@@ -186,7 +186,7 @@ def show_venue(venue_id):
         data = {
             "id": venue.id,
             "name": venue.name,
-            "genres": [genre.name for genre in venue.genres],
+            "genres": venue.genres,
             "address": venue.address,
             "city": venue.city,
             "state": venue.state,
@@ -245,11 +245,12 @@ def create_venue_submission():
             ),
             # seeking_talent=request.form["seeking_talent"],
             seeking_description=form.seeking_description.data,
+            genres= form.genres.data
         )
 
-        for genre in request.form.getlist("genres"):
-            genre = Genre.query.filter_by(name=genre).first()
-            new_venue.genres.append(genre)
+        #for genre in request.form.getlist("genres"):
+        #    genre = Genre.query.filter_by(name=genre).first()
+        #    new_venue.genres.append(genre)
 
         db.session.add(new_venue)
         db.session.commit()
@@ -269,7 +270,7 @@ def create_venue_submission():
     return render_template("pages/home.html")
 
 
-@app.route("/venues/<venue_id>", methods=["DELETE"])
+@app.route("/venues/<int:venue_id>", methods=["DELETE"])
 def delete_venue(venue_id):
     # DONE!: Complete this endpoint for taking a venue_id, and using
     # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
@@ -281,12 +282,12 @@ def delete_venue(venue_id):
         venue = Venue.query.get_or_404(venue_id)
         db.session.delete(venue)
         db.session.commit()
-        flash("Venue " + venue_id + " was successfully deleted!")
+        flash(f"Venue {venue_id} was successfully deleted!")
         return jsonify({"redirect": url_for("index")})
     except Exception as e:
         print(e)
         db.session.rollback()
-        flash("An error occurred. Venue " + venue_id + " could not be deleted.")
+        flash(f"An error occurred. Venue {venue_id} could not be deleted.")
         # return render_template("pages/show_venue.html", venue=venue_id)
         return jsonify({"error": str(e)}), 500
 
@@ -365,7 +366,7 @@ def show_artist(artist_id):
             show_data = {
                 "venue_id": show.venue_id,
                 "venue_name": show.venue.name,
-                "venue_image_link": show.venue.image_link,
+                "venue_image_link": show.venue.image_link   ,
                 "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S"),
             }
             if show.start_time <= datetime.now():
@@ -376,7 +377,7 @@ def show_artist(artist_id):
         data = {
             "id": artist.id,
             "name": artist.name,
-            "genres": [genre.name for genre in artist.genres],
+            "genres": artist.genres,
             "city": artist.city,
             "state": artist.state,
             "phone": artist.phone,
@@ -403,7 +404,7 @@ def edit_artist(artist_id):
     artist = Artist.query.get_or_404(artist_id)
     if artist:
         form.name.data = artist.name
-        form.genres.data = [genre.name for genre in artist.genres]
+        form.genres.data = artist.genres
         form.city.data = artist.city
         form.state.data = artist.state
         form.phone.data = artist.phone
@@ -422,6 +423,7 @@ def edit_artist_submission(artist_id):
     # artist record with ID <artist_id> using the new attributes
 
     form = ArtistForm(request.form)
+    artist = Artist.query.get_or_404(artist_id)
 
     if not form.validate():
         message = []
@@ -431,7 +433,6 @@ def edit_artist_submission(artist_id):
         return render_template('forms/edit_artist.html', form=form, artist=artist)
 
 
-    artist = Artist.query.get_or_404(artist_id)
     if artist:
         try:
             artist.name = form.name.data
@@ -443,11 +444,7 @@ def edit_artist_submission(artist_id):
             artist.website = form.website_link.data
             artist.seeking_venue = form.seeking_venue.data
             artist.seeking_description = form.seeking_description.data
-
-            artist.genres = []
-            for genre in form.genres.data:
-                genre = Genre.query.filter_by(name=genre).first()
-                artist.genres.append(genre)
+            artist.genres = form.genres.data
 
             db.session.commit()
             flash("Artist " + request.form["name"] + " was successfully updated!")
@@ -468,18 +465,11 @@ def edit_venue(venue_id):
     form = VenueForm()
     # DONE!: populate form with values from venue with ID <venue_id>
 
-    if not form.validate():
-        message = []
-        for field, errors in form.errors.items():
-            message.append(field + ": " + ", ".join(errors))
-        flash('Please fix the following errors: ' + ', '.join(message))
-        return render_template('forms/edit_venue.html', form=form, venue=venue)
-
-
     venue = Venue.query.get_or_404(venue_id)
+
     if venue:
         form.name.data = venue.name
-        form.genres.data = [genre.name for genre in venue.genres]
+        form.genres.data = venue.genres
         form.address.data = venue.address
         form.city.data = venue.city
         form.state.data = venue.state
@@ -499,6 +489,7 @@ def edit_venue_submission(venue_id):
     # venue record with ID <venue_id> using the new attributes
 
     form = VenueForm(request.form)
+    venue = Venue.query.get_or_404(venue_id)
 
     if not form.validate():
         message = []
@@ -507,7 +498,6 @@ def edit_venue_submission(venue_id):
         flash('Please fix the following errors: ' + ', '.join(message))
         return render_template('forms/edit_venue.html', form=form, venue=venue)
     
-    venue = Venue.query.get_or_404(venue_id)
     if venue:
         try:
             venue.name = form.name.data
@@ -520,10 +510,7 @@ def edit_venue_submission(venue_id):
             venue.seeking_talent = form.seeking_talent.data
             venue.seeking_description = form.seeking_description.data
 
-            venue.genres = []
-            for genre in form.genres.data:
-                genre = Genre.query.filter_by(name=genre).first()
-                venue.genres.append(genre)
+            venue.genres = form.genres.data
 
             db.session.commit()
             flash("Venue " + request.form["name"] + " was successfully updated!")
@@ -576,11 +563,8 @@ def create_artist_submission():
             website=form.website_link.data,
             seeking_venue=form.seeking_venue.data,
             seeking_description=form.seeking_description.data,
+            genres=form.genres.data
         )
-        new_artist.genres = []
-        for genre in form.genres.data:
-            genre = Genre.query.filter_by(name=genre).first()
-            new_artist.genres.append(genre)
 
         db.session.add(new_artist)
         db.session.commit()

@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from models import db, Venue, Artist, Genre, ArtistGenre, VenueGenre, Show
+from models import db, Venue, Artist, Show
 from app import app
 
 #app = Flask(__name__)
@@ -9,47 +9,14 @@ from app import app
 
 with app.app_context():
     try: 
-        VenueGenre.query.delete()
-        ArtistGenre.query.delete()
         Artist.query.delete()
-        Genre.query.delete()
         Venue.query.delete()
         Show.query.delete()
         db.session.commit()
 
-        genres = [
-            "Alternative",
-            "Blues",
-            "Classical",
-            "Country",
-            "Electronic",
-            "Folk",
-            "Funk",
-            "Hip-Hop",
-            "Heavy Metal",
-            "Instrumental",
-            "Jazz",
-            "Musical Theatre",
-            "Pop",
-            "Punk",
-            "R&B",
-            "Reggae",
-            "Rock n Roll",
-            "Soul",
-            "Other",
-        ]
-
-        for g in genres:
-            new_genre = Genre()
-            new_genre.name = g
-            db.session.add(new_genre)
-            print("adding", new_genre)
-
-        db.session.commit()
-
         artists = [
             {
-                "id": 4,
+                #"id": 1,
                 "name": "Guns N Petals",
                 "genres": ["Rock n Roll"],
                 "city": "San Francisco",
@@ -73,7 +40,7 @@ with app.app_context():
                 "upcoming_shows_count": 0,
             },
             {
-                "id": 5,
+                #"id": 2,
                 "name": "Matt Quevedo",
                 "genres": ["Jazz"],
                 "city": "New York",
@@ -95,7 +62,7 @@ with app.app_context():
                 "upcoming_shows_count": 0,
             },
             {
-                "id": 6,
+                #"id": 3,
                 "name": "The Wild Sax Band",
                 "genres": ["Jazz", "Classical"],
                 "city": "San Francisco",
@@ -129,16 +96,11 @@ with app.app_context():
             },
         ]
 
+        print("inserting artists...")
         for a in artists:
             new_artist = Artist()
             for k in a.keys():
-                if type(a[k]) is not list:
-                    setattr(new_artist, k, a[k])
-                    # print(k, a[k])
-                else:
-                    if k == "genres":
-                        artist_genres = Genre.query.filter(Genre.name.in_(a[k])).all()
-                        new_artist.genres.extend(artist_genres)
+                setattr(new_artist, k, a[k])
             db.session.add(new_artist)
             print("Adding ", new_artist)
 
@@ -146,7 +108,7 @@ with app.app_context():
 
         venues = [
             {
-                "id": 1,
+                #"id": 1,
                 "name": "The Musical Hop",
                 "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
                 "address": "1015 Folsom Street",
@@ -160,7 +122,7 @@ with app.app_context():
                 "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
                 "past_shows": [
                     {
-                        "artist_id": 4,
+                        "artist_id": 1,
                         "artist_name": "Guns N Petals",
                         "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
                         "start_time": "2019-05-21T21:30:00.000Z",
@@ -171,7 +133,7 @@ with app.app_context():
                 "upcoming_shows_count": 0,
             },
             {
-                "id": 2,
+                #"id": 2,
                 "name": "The Dueling Pianos Bar",
                 "genres": ["Classical", "R&B", "Hip-Hop"],
                 "address": "335 Delancey Street",
@@ -188,7 +150,7 @@ with app.app_context():
                 "upcoming_shows_count": 0,
             },
             {
-                "id": 3,
+                #"id": 3,
                 "name": "Park Square Live Music & Coffee",
                 "genres": ["Rock n Roll", "Jazz", "Classical", "Folk"],
                 "address": "34 Whiskey Moore Ave",
@@ -201,7 +163,7 @@ with app.app_context():
                 "image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
                 "past_shows": [
                     {
-                        "artist_id": 5,
+                        "artist_id": 2,
                         "artist_name": "Matt Quevedo",
                         "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
                         "start_time": "2019-06-15T23:00:00.000Z",
@@ -209,19 +171,19 @@ with app.app_context():
                 ],
                 "upcoming_shows": [
                     {
-                        "artist_id": 6,
+                        "artist_id": 3,
                         "artist_name": "The Wild Sax Band",
                         "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
                         "start_time": "2035-04-01T20:00:00.000Z",
                     },
                     {
-                        "artist_id": 6,
+                        "artist_id": 3,
                         "artist_name": "The Wild Sax Band",
                         "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
                         "start_time": "2035-04-08T20:00:00.000Z",
                     },
                     {
-                        "artist_id": 6,
+                        "artist_id": 3,
                         "artist_name": "The Wild Sax Band",
                         "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
                         "start_time": "2035-04-15T20:00:00.000Z",
@@ -232,16 +194,11 @@ with app.app_context():
             },
         ]
 
+        print("inserting venues...")
         for v in venues:
             new_venue = Venue()
             for k in v.keys():
-                if type(v[k]) is not list:
-                    setattr(new_venue, k, v[k])
-                    # print(k, a[k])
-                else:
-                    if k == "genres":
-                        venue_genres = Genre.query.filter(Genre.name.in_(v[k])).all()
-                        new_venue.genres.extend(venue_genres)
+                setattr(new_venue, k, v[k])
             db.session.add(new_venue)
             print("Adding ", new_venue)
 
@@ -251,7 +208,7 @@ with app.app_context():
             {
                 "venue_id": 1,
                 "venue_name": "The Musical Hop",
-                "artist_id": 4,
+                "artist_id": 1,
                 "artist_name": "Guns N Petals",
                 "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
                 "start_time": "2019-05-21T21:30:00.000Z",
@@ -259,7 +216,7 @@ with app.app_context():
             {
                 "venue_id": 3,
                 "venue_name": "Park Square Live Music & Coffee",
-                "artist_id": 5,
+                "artist_id": 2,
                 "artist_name": "Matt Quevedo",
                 "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
                 "start_time": "2019-06-15T23:00:00.000Z",
@@ -267,7 +224,7 @@ with app.app_context():
             {
                 "venue_id": 3,
                 "venue_name": "Park Square Live Music & Coffee",
-                "artist_id": 6,
+                "artist_id": 3,
                 "artist_name": "The Wild Sax Band",
                 "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
                 "start_time": "2035-04-01T20:00:00.000Z",
@@ -275,7 +232,7 @@ with app.app_context():
             {
                 "venue_id": 3,
                 "venue_name": "Park Square Live Music & Coffee",
-                "artist_id": 6,
+                "artist_id": 3,
                 "artist_name": "The Wild Sax Band",
                 "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
                 "start_time": "2035-04-08T20:00:00.000Z",
@@ -283,14 +240,14 @@ with app.app_context():
             {
                 "venue_id": 3,
                 "venue_name": "Park Square Live Music & Coffee",
-                "artist_id": 6,
+                "artist_id": 3,
                 "artist_name": "The Wild Sax Band",
                 "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
                 "start_time": "2035-04-15T20:00:00.000Z",
             },
         ]
 
-
+        print("inserting shows...")
         for s in shows:
             new_show = Show()
             new_show.venue_id = s["venue_id"]

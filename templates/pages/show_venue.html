@@ -84,8 +84,13 @@
 
 <script>
 	function handleVenueDeleteClick(venueId) {
+		const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 		fetch('/venues/' + venueId, {
 			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRF-TOKEN': csrfToken
+			},
 			timeout: 5000,
 		})
 			.then(response => {
