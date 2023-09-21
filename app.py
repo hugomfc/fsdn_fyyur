@@ -24,7 +24,10 @@ from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
 from models import db, Show, Venue, Artist
+
+# from flask_wtf import csrf
 from flask_wtf.csrf import CSRFProtect
+
 from datetime import datetime
 
 # ----------------------------------------------------------------------------#
@@ -80,7 +83,7 @@ def venues():
 
     data = []
 
-    venues_upcoming_shows = (
+    venues_shows = (
         db.session.query(
             Venue.city,
             Venue.state,
@@ -89,30 +92,30 @@ def venues():
             func.count(Show.id).label("num_upcoming_shows"),
         )
         .outerjoin(Show)
-        .filter(Show.start_time > datetime.now())
+        # .filter(Show.start_time > datetime.now())
         .group_by(Venue.city, Venue.state, Venue.id, Venue.name)
-        .order_by(Venue.city, Venue.state, Venue.id, Venue.name)
+        .order_by("num_upcoming_shows", Venue.city, Venue.state, Venue.id, Venue.name)
         .all()
     )
 
-    if len(venues_upcoming_shows) > 0:
-        city = venues_upcoming_shows[0].city
-        state = venues_upcoming_shows[0].state
-        venues = []
-        for venue in venues_upcoming_shows:
-            if city != venue.city or state != venue.state:
-                data.append({"city": city, "state": state, "venues": venues})
-                city = venue.city
-                state = venue.state
-                venues = []
-            venues.append(
-                {
-                    "id": venue.id,
-                    "name": venue.name,
-                    "num_upcoming_shows": venue.num_upcoming_shows,
-                }
-            )
-        data.append({"city": city, "state": state, "venues": venues})
+    # if len(venues_upcoming_shows) > 0:
+    city = venues_shows[0].city
+    state = venues_shows[0].state
+    venues = []
+    for venue in venues_shows:
+        if city != venue.city or state != venue.state:
+            data.append({"city": city, "state": state, "venues": venues})
+            city = venue.city
+            state = venue.state
+            venues = []
+        venues.append(
+            {
+                "id": venue.id,
+                "name": venue.name,
+                "num_upcoming_shows": venue.num_upcoming_shows,
+            }
+        )
+    data.append({"city": city, "state": state, "venues": venues})
 
     return render_template("pages/venues.html", areas=data)
 
@@ -134,7 +137,7 @@ def search_venues():
         )
         .filter(Venue.name.ilike(f"%{search_term}%"))
         .group_by(Venue.city, Venue.state, Venue.id, Venue.name)
-        .order_by(Venue.city, Venue.state, Venue.id, Venue.name)
+        .order_by("num_upcoming_shows", Venue.city, Venue.state, Venue.id, Venue.name)
         .all()
     )
 
@@ -169,38 +172,48 @@ def show_venue(venue_id):
     upcoming_shows = []
 
     venue = Venue.query.get_or_404(venue_id)
+    venue_shows = (
+        db.session.query(
+            Artist.id.label("artist_id"),
+            Artist.name.label("artist_name"),
+            Artist.image_link.label("artist_image_link"),
+            Show.start_time.label("start_time"),
+        )
+        .join(Artist)
+        .join(Venue)
+        .filter(Venue.id == venue_id)
+    )
 
-    if venue:
-        for show in venue.shows:
-            show_data = {
-                "artist_id": show.artist_id,
-                "artist_name": show.artist.name,
-                "artist_image_link": show.artist.image_link,
-                "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S"),
-            }
-            if show.start_time <= datetime.now():
-                past_shows.append(show_data)
-            else:
-                upcoming_shows.append(show_data)
-
-        data = {
-            "id": venue.id,
-            "name": venue.name,
-            "genres": venue.genres,
-            "address": venue.address,
-            "city": venue.city,
-            "state": venue.state,
-            "phone": venue.phone,
-            "website": venue.website,
-            "facebook_link": venue.facebook_link,
-            "seeking_talent": venue.seeking_talent,
-            "seeking_description": venue.seeking_description,
-            "image_link": venue.image_link,
-            "past_shows": past_shows,
-            "upcoming_shows": upcoming_shows,
-            "past_shows_count": len(past_shows),
-            "upcoming_shows_count": len(upcoming_shows),
+    for show in venue_shows:
+        show_data = {
+            "artist_id": show.artist_id,
+            "artist_name": show.artist_name,
+            "artist_image_link": show.artist_image_link,
+            "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S"),
         }
+        if show.start_time <= datetime.now():
+            past_shows.append(show_data)
+        else:
+            upcoming_shows.append(show_data)
+
+    data = {
+        "id": venue.id,
+        "name": venue.name,
+        "genres": venue.genres,
+        "address": venue.address,
+        "city": venue.city,
+        "state": venue.state,
+        "phone": venue.phone,
+        "website": venue.website,
+        "facebook_link": venue.facebook_link,
+        "seeking_talent": venue.seeking_talent,
+        "seeking_description": venue.seeking_description,
+        "image_link": venue.image_link,
+        "past_shows": past_shows,
+        "upcoming_shows": upcoming_shows,
+        "past_shows_count": len(past_shows),
+        "upcoming_shows_count": len(upcoming_shows),
+    }
     return render_template("pages/show_venue.html", venue=data)
 
 
@@ -225,8 +238,8 @@ def create_venue_submission():
         message = []
         for field, errors in form.errors.items():
             message.append(field + ": " + ", ".join(errors))
-        flash('Please fix the following errors: ' + ', '.join(message))
-        return render_template('forms/new_venue.html', form=form)
+        flash("Please fix the following errors: " + ", ".join(message))
+        return render_template("forms/new_venue.html", form=form)
 
     try:
         print(request.form)
@@ -240,15 +253,14 @@ def create_venue_submission():
             facebook_link=form.facebook_link.data,
             website=form.website_link.data,
             seeking_talent=(
-                "seeking_talent" in request.form
-                and form.seeking_talent.data == "y"
+                "seeking_talent" in request.form and form.seeking_talent.data == "y"
             ),
             # seeking_talent=request.form["seeking_talent"],
             seeking_description=form.seeking_description.data,
-            genres= form.genres.data
+            genres=form.genres.data,
         )
 
-        #for genre in request.form.getlist("genres"):
+        # for genre in request.form.getlist("genres"):
         #    genre = Genre.query.filter_by(name=genre).first()
         #    new_venue.genres.append(genre)
 
@@ -361,36 +373,47 @@ def show_artist(artist_id):
 
     artist = Artist.query.get_or_404(artist_id)
 
-    if artist:
-        for show in artist.shows:
-            show_data = {
-                "venue_id": show.venue_id,
-                "venue_name": show.venue.name,
-                "venue_image_link": show.venue.image_link   ,
-                "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S"),
-            }
-            if show.start_time <= datetime.now():
-                past_shows.append(show_data)
-            else:
-                upcoming_shows.append(show_data)
+    artist_shows = (
+        db.session.query(
+            Venue.id.label("venue_id"),
+            Venue.name.label("venue_name"),
+            Venue.image_link.label("venue_image_link"),
+            Show.start_time.label("start_time"),
+        )
+        .join(Artist)
+        .join(Venue)
+        .filter(Artist.id == artist_id)
+    )
 
-        data = {
-            "id": artist.id,
-            "name": artist.name,
-            "genres": artist.genres,
-            "city": artist.city,
-            "state": artist.state,
-            "phone": artist.phone,
-            "website": artist.website,
-            "facebook_link": artist.facebook_link,
-            "seeking_venue": artist.seeking_venue,
-            "seeking_description": artist.seeking_description,
-            "image_link": artist.image_link,
-            "past_shows": past_shows,
-            "past_shows_count": len(past_shows),
-            "upcoming_shows": upcoming_shows,
-            "upcoming_shows_count": len(upcoming_shows),
+    for show in artist_shows:
+        show_data = {
+            "venue_id": show.venue_id,
+            "venue_name": show.venue_name,
+            "venue_image_link": show.venue_image_link,
+            "start_time": show.start_time.strftime("%Y-%m-%d %H:%M:%S"),
         }
+        if show.start_time <= datetime.now():
+            past_shows.append(show_data)
+        else:
+            upcoming_shows.append(show_data)
+
+    data = {
+        "id": artist.id,
+        "name": artist.name,
+        "genres": artist.genres,
+        "city": artist.city,
+        "state": artist.state,
+        "phone": artist.phone,
+        "website": artist.website,
+        "facebook_link": artist.facebook_link,
+        "seeking_venue": artist.seeking_venue,
+        "seeking_description": artist.seeking_description,
+        "image_link": artist.image_link,
+        "past_shows": past_shows,
+        "past_shows_count": len(past_shows),
+        "upcoming_shows": upcoming_shows,
+        "upcoming_shows_count": len(upcoming_shows),
+    }
     return render_template("pages/show_artist.html", artist=data)
 
 
@@ -429,9 +452,8 @@ def edit_artist_submission(artist_id):
         message = []
         for field, errors in form.errors.items():
             message.append(field + ": " + ", ".join(errors))
-        flash('Please fix the following errors: ' + ', '.join(message))
-        return render_template('forms/edit_artist.html', form=form, artist=artist)
-
+        flash("Please fix the following errors: " + ", ".join(message))
+        return render_template("forms/edit_artist.html", form=form, artist=artist)
 
     if artist:
         try:
@@ -495,9 +517,9 @@ def edit_venue_submission(venue_id):
         message = []
         for field, errors in form.errors.items():
             message.append(field + ": " + ", ".join(errors))
-        flash('Please fix the following errors: ' + ', '.join(message))
-        return render_template('forms/edit_venue.html', form=form, venue=venue)
-    
+        flash("Please fix the following errors: " + ", ".join(message))
+        return render_template("forms/edit_venue.html", form=form, venue=venue)
+
     if venue:
         try:
             venue.name = form.name.data
@@ -548,9 +570,9 @@ def create_artist_submission():
         message = []
         for field, errors in form.errors.items():
             message.append(field + ": " + ", ".join(errors))
-        flash('Please fix the following errors: ' + ', '.join(message))
+        flash("Please fix the following errors: " + ", ".join(message))
         form = ArtistForm()
-        return render_template('forms/new_artist.html', form=form)
+        return render_template("forms/new_artist.html", form=form)
 
     try:
         new_artist = Artist(
@@ -563,7 +585,7 @@ def create_artist_submission():
             website=form.website_link.data,
             seeking_venue=form.seeking_venue.data,
             seeking_description=form.seeking_description.data,
-            genres=form.genres.data
+            genres=form.genres.data,
         )
 
         db.session.add(new_artist)
@@ -624,9 +646,9 @@ def create_show_submission():
         message = []
         for field, errors in form.errors.items():
             message.append(field + ": " + ", ".join(errors))
-        flash('Please fix the following errors: ' + ', '.join(message))
+        flash("Please fix the following errors: " + ", ".join(message))
         form = ShowForm()
-        return render_template('forms/new_show.html', form=form)
+        return render_template("forms/new_show.html", form=form)
 
     try:
         new_show = Show(
